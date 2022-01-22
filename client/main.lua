@@ -11,6 +11,7 @@ local DropsNear = {}
 local CurrentVehicle = nil
 local CurrentGlovebox = nil
 local CurrentStash = nil
+local CurrentMailbox = nil
 local isCrafting = false
 local isHotbar = false
 local showTrunkPos = false
@@ -267,6 +268,10 @@ RegisterNetEvent('inventory:client:CheckOpenState', function(type, id, label)
         if name ~= CurrentStash or CurrentStash == nil then
             TriggerServerEvent('inventory:server:SetIsOpenState', false, type, id)
         end
+    elseif type == "mailbox" then
+        if name ~= CurrentMailbox or CurrentMailbox == nil then
+            TriggerServerEvent('inventory:server:SetIsOpenState', false, type, id)
+        end
     elseif type == "trunk" then
         if name ~= CurrentVehicle or CurrentVehicle == nil then
             TriggerServerEvent('inventory:server:SetIsOpenState', false, type, id)
@@ -432,16 +437,16 @@ end)
 
 RegisterNetEvent('inventory:client:UseSnowball', function(amount)
     local ped = PlayerPedId()
-    GiveWeaponToPed(ped, `weapon_snowball`, amount, false, false)
-    SetPedAmmo(ped, `weapon_snowball`, amount)
-    SetCurrentPedWeapon(ped, `weapon_snowball`, true)
+    GiveWeaponToPed(ped, 'weapon_snowball', amount, false, false)
+    SetPedAmmo(ped, 'weapon_snowball', amount)
+    SetCurrentPedWeapon(ped, 'weapon_snowball', true)
 end)
 
 RegisterNetEvent('inventory:client:UseWeapon', function(weaponData, shootbool)
     local ped = PlayerPedId()
     local weaponName = tostring(weaponData.name)
     if currentWeapon == weaponName then
-        SetCurrentPedWeapon(ped, `WEAPON_UNARMED`, true)
+        SetCurrentPedWeapon(ped, 'WEAPON_UNARMED', true)
         Wait(1500)
         RemoveAllPedWeapons(ped, true)
         TriggerEvent('weapons:client:SetCurrentWeapon', nil, shootbool)
@@ -484,7 +489,7 @@ RegisterNetEvent('inventory:client:CheckWeapon', function(weaponName)
     local ped = PlayerPedId()
     if currentWeapon == weaponName then
         TriggerEvent('weapons:ResetHolster')
-        SetCurrentPedWeapon(ped, `WEAPON_UNARMED`, true)
+        SetCurrentPedWeapon(ped, 'WEAPON_UNARMED', true)
         RemoveAllPedWeapons(ped, true)
         currentWeapon = nil
     end
@@ -524,6 +529,10 @@ end)
 
 RegisterNetEvent('inventory:client:SetCurrentStash', function(stash)
     CurrentStash = stash
+end)
+
+RegisterNetEvent('inventory:client:SetCurrentMailbox', function(mailbox)
+    CurrentMailbox = mailbox
 end)
 
 -- Commands
@@ -755,6 +764,9 @@ RegisterNUICallback("CloseInventory", function(data, cb)
     elseif CurrentStash ~= nil then
         TriggerServerEvent("inventory:server:SaveInventory", "stash", CurrentStash)
         CurrentStash = nil
+    elseif CurrentMailbox ~= nil then
+        TriggerServerEvent("inventory:server:SaveInventory", "mailbox", CurrentMailbox)
+        CurrentMailbox = nil
     else
         TriggerServerEvent("inventory:server:SaveInventory", "drop", CurrentDrop)
         CurrentDrop = 0
@@ -936,14 +948,14 @@ RegisterNetEvent("inventory:client:WeaponAttachmentCrafting", function(dropId)
 end)
 
 local toolBoxModels = {
-    `prop_toolchest_05`,
-    `prop_tool_bench02_ld`,
-    `prop_tool_bench02`,
-    `prop_toolchest_02`,
-    `prop_toolchest_03`,
-    `prop_toolchest_03_l2`,
-    `prop_toolchest_05`,
-    `prop_toolchest_04`,
+    'prop_toolchest_05',
+    'prop_tool_bench02_ld',
+    'prop_tool_bench02',
+    'prop_toolchest_02',
+    'prop_toolchest_03',
+    'prop_toolchest_03_l2',
+    'prop_toolchest_05',
+    'prop_toolchest_04',
 }
 exports['qb-target']:AddTargetModel(toolBoxModels, {
 		options = {

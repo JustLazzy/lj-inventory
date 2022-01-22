@@ -5,6 +5,7 @@ local Drops = {}
 local Trunks = {}
 local Gloveboxes = {}
 local Stashes = {}
+local Mailbox = {}
 local ShopItems = {}
 
 -- Functions
@@ -182,6 +183,184 @@ local function RemoveFromStash(stashId, slot, itemName, amount)
 		Stashes[stashId].items[slot] = nil
 		if Stashes[stashId].items == nil then
 			Stashes[stashId].items[slot] = nil
+		end
+	end
+end
+
+-- Mailbox items
+local function GetMailboxItems(mailboxId)
+	local items = {}
+	local result = MySQL.Sync.fetchScalar('SELECT items FROM mailboxitems WHERE mailbox = ?', {mailboxId})
+	if result then
+		local mailboxItems = json.decode(result)
+		if mailboxItems then
+			for k, item in pairs(mailboxItems) do
+				local itemInfo = QBCore.Shared.Items[item.name:lower()]
+				if itemInfo then
+					items[item.slot] = {
+						name = itemInfo["name"],
+						amount = tonumber(item.amount),
+						info = item.info ~= nil and item.info or "",
+						label = itemInfo["label"],
+						description = itemInfo["description"] ~= nil and itemInfo["description"] or "",
+						weight = itemInfo["weight"],
+						type = itemInfo["type"],
+						unique = itemInfo["unique"],
+						useable = itemInfo["useable"],
+						image = itemInfo["image"],
+						slot = item.slot,
+					}
+				end
+			end
+		end
+	end
+	return items
+end
+
+local function SaveMailItems(mailId, items)
+	if Mailbox[mailId].label ~= "Mailbox-None" then
+		if items ~= nil then
+			for slot, item in pairs(items) do
+				item.description = nil
+			end
+			MySQL.Async.insert('INSERT INTO mailboxitems (mailbox, items) VALUES (:mailbox, :items) ON DUPLICATE KEY UPDATE items = :items', {
+				['mailbox'] = mailId,
+				['items'] = json.encode(items)
+			})
+			Mailbox[mailId].isOpen = false
+		end
+	end
+end
+
+local function AddToMailbox(mailId, slot, otherslot, itemName, amount, info)
+	local amount = tonumber(amount)
+	local ItemData = QBCore.Shared.Items[itemName]
+	if not ItemData.unique then
+		if Mailbox[mailId].items[slot] ~= nil and Mailbox[mailId].items[slot].name == itemName then
+			Mailbox[mailId].items[slot].amount = Mailbox[mailId].items[slot].amount + amount
+		else
+			local itemInfo = QBCore.Shared.Items[itemName:lower()]
+			Mailbox[mailId].items[slot] = {
+				name = itemInfo["name"],
+				amount = amount,
+				info = info ~= nil and info or "",
+				label = itemInfo["label"],
+				description = itemInfo["description"] ~= nil and itemInfo["description"] or "",
+				weight = itemInfo["weight"],
+				type = itemInfo["type"],
+				unique = itemInfo["unique"],
+				useable = itemInfo["useable"],
+				image = itemInfo["image"],
+				slot = slot,
+			}
+		end
+	else
+		if Mailbox[mailId].items[slot] ~= nil and Mailbox[mailId].items[slot].name == itemName then
+			local itemInfo = QBCore.Shared.Items[itemName:lower()]
+			Stashes[stashId].items[otherslot] = {
+				name = itemInfo["name"],
+				amount = amount,
+				info = info ~= nil and info or "",
+				label = itemInfo["label"],
+				description = itemInfo["description"] ~= nil and itemInfo["description"] or "",
+				weight = itemInfo["weight"],
+				type = itemInfo["type"],
+				unique = itemInfo["unique"],
+				useable = itemInfo["useable"],
+				image = itemInfo["image"],
+				slot = otherslot,
+			}
+		else
+			local itemInfo = QBCore.Shared.Items[itemName:lower()]
+			Mailbox[mailId].items[slot] = {
+				name = itemInfo["name"],
+				amount = amount,
+				info = info ~= nil and info or "",
+				label = itemInfo["label"],
+				description = itemInfo["description"] ~= nil and itemInfo["description"] or "",
+				weight = itemInfo["weight"],
+				type = itemInfo["type"],
+				unique = itemInfo["unique"],
+				useable = itemInfo["useable"],
+				image = itemInfo["image"],
+				slot = slot,
+			}
+		end
+	end
+end
+
+local function AddToMailbox(mailId, slot, otherslot, itemName, amount, info)
+	local amount = tonumber(amount)
+	local ItemData = QBCore.Shared.Items[itemName]
+	if not ItemData.unique then
+		if Mailbox[mailId].items[slot] ~= nil and Mailbox[mailId].items[slot].name == itemName then
+			Mailbox[mailId].items[slot].amount = Mailbox[mailId].items[slot].amount + amount
+		else
+			local itemInfo = QBCore.Shared.Items[itemName:lower()]
+			Mailbox[mailId].items[slot] = {
+				name = itemInfo["name"],
+				amount = amount,
+				info = info ~= nil and info or "",
+				label = itemInfo["label"],
+				description = itemInfo["description"] ~= nil and itemInfo["description"] or "",
+				weight = itemInfo["weight"],
+				type = itemInfo["type"],
+				unique = itemInfo["unique"],
+				useable = itemInfo["useable"],
+				image = itemInfo["image"],
+				slot = slot,
+			}
+		end
+	else
+		if Mailbox[mailId].items[slot] ~= nil and Mailbox[mailId].items[slot].name == itemName then
+			local itemInfo = QBCore.Shared.Items[itemName:lower()]
+			Stashes[stashId].items[otherslot] = {
+				name = itemInfo["name"],
+				amount = amount,
+				info = info ~= nil and info or "",
+				label = itemInfo["label"],
+				description = itemInfo["description"] ~= nil and itemInfo["description"] or "",
+				weight = itemInfo["weight"],
+				type = itemInfo["type"],
+				unique = itemInfo["unique"],
+				useable = itemInfo["useable"],
+				image = itemInfo["image"],
+				slot = otherslot,
+			}
+		else
+			local itemInfo = QBCore.Shared.Items[itemName:lower()]
+			Mailbox[mailId].items[slot] = {
+				name = itemInfo["name"],
+				amount = amount,
+				info = info ~= nil and info or "",
+				label = itemInfo["label"],
+				description = itemInfo["description"] ~= nil and itemInfo["description"] or "",
+				weight = itemInfo["weight"],
+				type = itemInfo["type"],
+				unique = itemInfo["unique"],
+				useable = itemInfo["useable"],
+				image = itemInfo["image"],
+				slot = slot,
+			}
+		end
+	end
+end
+
+local function RemoveFromMailbox(mailboxId, toSlot, itemInfo, toAmount)
+	local amount = tonumber(toAmount)
+	if Mailbox[mailboxId].items[toSlot] ~= nil and Mailbox[mailboxId].items[toSlot].name == itemInfo then
+		if Mailbox[mailboxId].items[toSlot].amount > amount then
+			Mailbox[mailboxId].items[toSlot].amount = Mailbox[mailboxId].items[toSlot].amount - amount
+		else
+			Mailbox[mailboxId].items[toSlot] = nil
+			if next(Mailbox[mailboxId].items) == nil then
+				Mailbox[mailboxId].items = {}
+			end
+		end
+	else
+		Mailbox[mailboxId].items[toSlot] = nil
+		if Mailbox[mailboxId].items == nil then
+			Mailbox[mailboxId].items[toSlot] = nil
 		end
 	end
 end
@@ -594,6 +773,8 @@ RegisterNetEvent('inventory:server:SetIsOpenState', function(IsOpen, type, id)
 			Stashes[id].isOpen = false
 		elseif type == "trunk" then
 			Trunks[id].isOpen = false
+		elseif type == "mailbox" then
+			Mailbox[id].isOpen = false
 		elseif type == "glovebox" then
 			Gloveboxes[id].isOpen = false
 		end
@@ -648,6 +829,49 @@ RegisterNetEvent('inventory:server:OpenInventory', function(name, id, other)
 						Stashes[id].items = {}
 						Stashes[id].isOpen = src
 						Stashes[id].label = secondInv.label
+					end
+				end
+			elseif name == "mailbox" then
+				if Mailbox[id] ~= nil then
+					if Mailbox[id].isOpen then
+						local Target = QBCore.Functions.GetPlayer(Mailbox[id].isOpen)
+						if Target ~= nil then
+							TriggerClientEvent('inventory:client:CheckOpenState', Mailbox[id].isOpen, name, id, Mailbox[id].label)
+						else
+							Mailbox[id].isOpen = false
+						end
+					end
+				end
+				local maxweight = 15000
+				local slots = 5
+				if other ~= nil then
+					maxweight = other.maxweight ~= nil and other.maxweight or 1000000
+					slots = other.slots ~= nil and other.slots or 50
+				end
+				secondInv.name = "mailbox-"..id
+				secondInv.label = "Mailbox-"..id
+				secondInv.maxweight = maxweight
+				secondInv.inventory = {}
+				secondInv.slots = slots
+				if Mailbox[id] ~= nil and Mailbox[id].isOpen then
+					secondInv.name = "none-inv"
+					secondInv.label = "Mailbox-None"
+					secondInv.maxweight = 1000000
+					secondInv.inventory = {}
+					secondInv.slots = 0
+				else
+					local mailboxItems = GetMailboxItems(id)
+					if next(mailboxItems) ~= nil then
+						secondInv.inventory = mailboxItems
+						Mailbox[id] = {}
+						Mailbox[id].items = mailboxItems
+						Mailbox[id].isOpen = src
+						Mailbox[id].label = secondInv.label
+					else
+						Mailbox[id] = {}
+						Mailbox[id].items = {}
+						Mailbox[id].isOpen = src
+						Mailbox[id].label = secondInv.label
 					end
 				end
 			elseif name == "trunk" then
@@ -816,6 +1040,8 @@ RegisterNetEvent('inventory:server:SaveInventory', function(type, id)
 		end
 	elseif type == "stash" then
 		SaveStashItems(id, Stashes[id].items)
+	elseif type == "mailbox" then
+		SaveMailItems(id, Mailbox[id].items)
 	elseif type == "drop" then
 		if Drops[id] ~= nil then
 			Drops[id].isOpen = false
@@ -979,6 +1205,26 @@ RegisterNetEvent('inventory:server:SetInventoryData', function(fromInventory, to
 				end
 				local itemInfo = QBCore.Shared.Items[fromItemData.name:lower()]
 				AddToStash(stashId, toSlot, fromSlot, itemInfo["name"], fromAmount, fromItemData.info)
+			elseif QBCore.Shared.SplitStr(toInventory, "-")[1] == "mailbox" then
+				-- Mailbox
+				local mailboxId = QBCore.Shared.SplitStr(toInventory, "-")[2]
+				local toItemData = Mailbox[mailboxId].items[toSlot]
+				Player.Functions.RemoveItem(fromItemData.name, fromAmount, fromSlot) 
+				TriggerClientEvent("inventory:client:CheckWeapon", src, fromItemData.name)
+
+				if toItemData ~= nil then
+					local iteminfo = QBCore.Shared.Items[toItemData.name:lower()]
+					local toAmount = tonumber(toAmount) ~= nil and tonumber(toAmount) or toItemData.amount
+					if toItemData.name ~= fromItemData.name then
+						RemoveFromMailbox(mailboxId, toSlot, itemInfo["name"], toAmount)
+						Player.Functions.AddItem(toItemData.name, toAmount, fromSlot, toItemData.info)
+					end
+				else
+					local iteminfo = QBCore.Shared.Items[fromItemData.name:lower()]
+
+				end
+				local itemInfo = QBCore.Shared.Items[fromItemData.name:lower()]
+				AddToMailbox(mailboxId, toSlot, fromSlot, itemInfo["name"], fromAmount, fromItemData.info)
 			elseif QBCore.Shared.SplitStr(toInventory, "-")[1] == "traphouse" then
 				-- Traphouse
 				local traphouseId = QBCore.Shared.SplitStr(toInventory, "-")[2]
@@ -1216,6 +1462,52 @@ RegisterNetEvent('inventory:server:SetInventoryData', function(fromInventory, to
 		else
 			TriggerClientEvent("QBCore:Notify", src, "Item doesn\'t exist??", "error")
 		end
+	elseif QBCore.Shared.SplitStr(fromInventory, "-")[1] == "mailbox" then
+		local mailboxId = QBCore.Shared.SplitStr(fromInventory, "-")[2]
+		local fromItemData = Mailbox[mailboxId].items[fromSlot]
+		local fromAmount = tonumber(fromAmount) ~= nil and tonumber(fromAmount) or fromItemData.amount
+		if fromItemData ~= nil and fromItemData.amount >= fromAmount then
+			local itemInfo = QBCore.Shared.Items[fromItemData.name:lower()]
+			if toInventory == "player" or toInventory == "hotbar" then
+				local toItemData = Player.Functions.GetItemBySlot(toSlot)
+				RemoveFromMailbox(mailboxId, fromSlot, itemInfo["name"], fromAmount)
+				if toItemData ~= nil then
+					local itemInfo = QBCore.Shared.Items[toItemData.name:lower()]
+					local toAmount = tonumber(toAmount) ~= nil and tonumber(toAmount) or toItemData.amount
+					if toItemData.name ~= fromItemData.name then
+						Player.Functions.RemoveItem(toItemData.name, toAmount, toSlot)
+						AddToMailbox(mailboxId, fromSlot, toSlot, itemInfo["name"], toAmount, toItemData.info)
+						-- TriggerEvent("qb-log:server:CreateLog", "mailbox", "Swapped Item", "orange", "**".. GetPlayerName(src) .. "** (citizenid: *"..Player.PlayerData.citizenid.."* | id: *"..src.."*) swapped item; name: **"..toItemData.name.."**, amount: **" .. toAmount .. "** with item; name: **"..fromItemData.name.."**, amount: **" .. fromAmount .. "** stash: *" .. stashId .. "*")
+					else
+						-- TriggerEvent("qb-log:server:CreateLog", "mailbox", "Stacked Item", "orange", "**".. GetPlayerName(src) .. "** (citizenid: *"..Player.PlayerData.citizenid.."* | id: *"..src.."*) stacked item; name: **"..toItemData.name.."**, amount: **" .. toAmount .. "** from stash: *" .. stashId .. "*")
+					end
+				else
+					-- TriggerEvent("qb-log:server:CreateLog", "mailbox", "Received Item", "green", "**".. GetPlayerName(src) .. "** (citizenid: *"..Player.PlayerData.citizenid.."* | id: *"..src.."*) received item; name: **"..fromItemData.name.."**, amount: **" .. fromAmount.. "** stash: *" .. stashId .. "*")
+				end
+				SaveMailItems(mailboxId, Mailbox[mailboxId].items)
+				Player.Functions.AddItem(fromItemData.name, fromAmount, toSlot, fromItemData.info)
+			else
+				local toItemData = Mailbox[mailboxId].items[toSlot]
+				RemoveFromMailbox(mailboxId, fromSlot, itemInfo["name"], fromAmount)
+				--Player.PlayerData.items[toSlot] = fromItemData
+				if toItemData ~= nil then
+					local itemInfo = QBCore.Shared.Items[toItemData.name:lower()]
+					--Player.PlayerData.items[fromSlot] = toItemData
+					local toAmount = tonumber(toAmount) ~= nil and tonumber(toAmount) or toItemData.amount
+					if toItemData.name ~= fromItemData.name then
+						local itemInfo = QBCore.Shared.Items[toItemData.name:lower()]
+						RemoveFromMailbox(mailboxId, toSlot, itemInfo["name"], toAmount)
+						AddToMailbox(mailboxId, fromSlot, toSlot, itemInfo["name"], toAmount, toItemData.info)
+					end
+				else
+					--Player.PlayerData.items[fromSlot] = nil
+				end
+				local itemInfo = QBCore.Shared.Items[fromItemData.name:lower()]
+				AddToMailbox(mailboxId, toSlot, fromSlot, itemInfo["name"], fromAmount, fromItemData.info)
+			end
+		else
+			TriggerClientEvent("QBCore:Notify", src, "Item doesn\'t exist??", "error")
+		end
 	elseif QBCore.Shared.SplitStr(fromInventory, "-")[1] == "traphouse" then
 		local traphouseId = QBCore.Shared.SplitStr(fromInventory, "-")[2]
 		local fromItemData = exports['qb-traphouse']:GetInventoryData(traphouseId, fromSlot)
@@ -1402,6 +1694,13 @@ RegisterNetEvent('qb-inventory:server:SaveStashItems', function(stashId, items)
     })
 end)
 
+RegisterNetEvent('qb-inventory:server:SaveMailboxItems', function(mailboxId, items)
+    MySQL.Async.insert('INSERT INTO mailboxitems (mailbox, items) VALUES (:stash, :items) ON DUPLICATE KEY UPDATE items = :items', {
+        ['mailbox'] = mailboxId,
+        ['items'] = json.encode(items)
+    })
+end)
+
 RegisterServerEvent("inventory:server:GiveItem", function(target, inventory, item, amount)
     local src = source
     local Player = QBCore.Functions.GetPlayer(src)
@@ -1441,6 +1740,10 @@ end)
 
 QBCore.Functions.CreateCallback('qb-inventory:server:GetStashItems', function(source, cb, stashId)
 	cb(GetStashItems(stashId))
+end)
+
+QBCore.Functions.CreateCallback('qb-inventory:server:GetMailboxItems', function(source, cb, mailboxId)
+	cb(GetMailboxItems(mailboxId))
 end)
 
 -- command
