@@ -1,4 +1,6 @@
-# My fork of LJ Inventory, Add mailbox system, I'm just copy and paste some code ngl...
+## My fork of LJ Inventory, Add mailbox system, I'm just copy and paste some code ngl...
+Anyway, just put patch.sql to your database, and you're done
+<br>
 
 ![LJ Inventory](https://user-images.githubusercontent.com/91661118/146313051-665337bf-ed92-4ed0-bbb9-6ee9613f670d.png)
 
